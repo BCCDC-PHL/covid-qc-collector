@@ -1,3 +1,4 @@
+dev-config.json
 *.pyc
 *.egg-info
 test_*

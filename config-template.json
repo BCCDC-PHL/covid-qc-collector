@@ -1,0 +1,8 @@
+{
+    "sequencer_output_dirs": [
+	"/path/to/sequencer1/output",
+	"/path/to/sequencer2/output",
+    ],
+    "analysis_by_run_dir": "/path/to/analysis_by_run",
+    "scan_interval_seconds": 5
+}

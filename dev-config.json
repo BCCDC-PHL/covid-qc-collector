@@ -1,4 +1,0 @@
-{
-    "analysis_output_dir": "/path/to/analysis_by_run",
-    "scan_interval_seconds": 3600
-}
