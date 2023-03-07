@@ -1,9 +1,14 @@
+import glob
 import json
 import logging
 import os
 import re
+import shutil
 
 from typing import Iterator, Optional
+
+import covid_qc_collector.parsers as parsers
+import covid_qc_collector.samplesheet as samplesheet
 
 
 def find_analysis_dirs(config, check_complete=True):
@@ -33,7 +38,7 @@ def find_analysis_dirs(config, check_complete=True):
 
         analysis_directory_path = os.path.abspath(subdir.path)
         analysis_dir = {
-            "analysis_directory_path": analysis_directory_path,
+            "path": analysis_directory_path,
         }
         if all(conditions_met):
             logging.info(json.dumps({"event_type": "analysis_directory_found", "sequencing_run_id": run_id, "analysis_directory_path": analysis_directory_path}))
@@ -43,6 +48,19 @@ def find_analysis_dirs(config, check_complete=True):
             logging.debug(json.dumps({"event_type": "directory_skipped", "analysis_directory_path": os.path.abspath(subdir.path), "conditions_checked": conditions_checked}))
             yield None
 
+
+def plates_by_run(config):
+    """
+    """
+    all_analysis_dirs = sorted(list(os.listdir(config['analysis_by_run_dir'])))
+    all_run_ids = filter(lambda x: re.match('\d{6}_[VM]', x) != None, all_analysis_dirs)
+    for run_id in all_run_ids:
+        samplesheet_path = samplesheet.find_samplesheet_for_run(run_id, config['sequencer_output_dirs'])
+        if samplesheet_path:
+            logging.info(json.dumps({"event_type": "found_samplesheet_file", "run_id": run_id, "samplesheet_path": samplesheet_path}))
+        else:
+            logging.error(json.dumps({"event_type": "failed_to_find_samplesheet_file", "run_id": run_id}))
+    
 
 def scan(config: dict[str, object]) -> Iterator[Optional[dict[str, str]]]:
     """
@@ -57,6 +75,36 @@ def scan(config: dict[str, object]) -> Iterator[Optional[dict[str, str]]]:
     for analysis_dir in find_analysis_dirs(config):    
         yield analysis_dir
 
+def find_latest_artic_output(analysis_dir):
+    """
+    """
+    artic_output_dir_glob = "ncov2019-artic-nf-v*-output"
+    artic_output_dirs = glob.glob(os.path.join(analysis_dir, artic_output_dir_glob))
+    latest_artic_output_dir = os.path.abspath(artic_output_dirs[-1])
+
+    return latest_artic_output_dir
+
+
+def find_latest_ncov_tools_output(artic_output_dir):
+    """
+    """
+    ncov_tools_output_dir_glob = "ncov-tools-v*-output"
+    ncov_tools_output_dirs = glob.glob(os.path.join(artic_output_dir, ncov_tools_output_dir_glob))
+    latest_ncov_tools_output_dir = os.path.abspath(ncov_tools_output_dirs[-1])
+
+    return latest_ncov_tools_output_dir
+
+
+def get_plate_numbers(ncov_tools_output_path):
+    """
+    """
+    plate_numbers = []
+    for plate_path in glob.glob(os.path.join(ncov_tools_output_path, 'by_plate', '*')):
+        plate_number = os.path.basename(plate_path)
+        plate_numbers.append(plate_number)
+
+    return plate_numbers
+
 
 def collect_outputs(config: dict[str, object], analysis_dir: Optional[dict[str, str]]):
     """
@@ -68,5 +116,53 @@ def collect_outputs(config: dict[str, object], analysis_dir: Optional[dict[str, 
     :rtype: 
     """
     logging.info(json.dumps({"event_type": "collect_outputs_start"}))
+    run_id = os.path.basename(analysis_dir['path'])
+
+    # artic-qc
+    latest_artic_output_path = find_latest_artic_output(analysis_dir['path'])
+    artic_qc_input_path = os.path.join(latest_artic_output_path, run_id + '.qc.csv')
+    artic_qc_output_path = os.path.join(config['output_dir'], "artic-qc", run_id + "_qc.json")
+    if not os.path.exists(artic_qc_output_path):
+        logging.info(json.dumps({"event_type": "parse_artic_qc_input_start", "run_id": run_id, "artic_qc_input_path": artic_qc_input_path}))
+        artic_qc = parsers.parse_artic_qc(artic_qc_input_path, run_id)
+        logging.info(json.dumps({"event_type": "parse_artic_qc_input_complete", "run_id": run_id, "artic_qc_input_path": artic_qc_input_path, "num_samples": len(artic_qc)}))
+        with open(artic_qc_output_path, 'w') as f:
+            json.dump(artic_qc, f, indent=2)
+        logging.info(json.dumps({"event_type": "write_artic_qc_output_complete", "run_id": run_id, "artic_qc_output_path": artic_qc_output_path}))
+
+    # ncov-tools-plots
+    latest_ncov_tools_output_path = find_latest_ncov_tools_output(latest_artic_output_path)
+
+    # plate numbers for run
+    plate_numbers = get_plate_numbers(latest_ncov_tools_output_path)
+
+    # ncov-tools-plots/depth-by-position
+    depth_by_position_outdir = os.path.join(config['output_dir'], 'ncov-tools-plots', 'depth-by-position')
+    for plate_number in plate_numbers:
+        depth_by_position_src_file = os.path.join(latest_ncov_tools_output_path, 'by_plate', plate_number, 'plots', run_id + '_' + plate_number + '_depth_by_position.pdf')
+        depth_by_position_dst_file = os.path.join(depth_by_position_outdir, run_id + '_' + plate_number + '_depth_by_position.pdf')
+        if os.path.exists(depth_by_position_src_file) and not os.path.exists(depth_by_position_dst_file):
+            shutil.copyfile(depth_by_position_src_file, depth_by_position_dst_file)
+            logging.info(json.dumps({"event_type": "copy_depth_by_position_file_complete", "run_id": run_id, "plate_number": plate_number, "depth_by_position_src_file": depth_by_position_src_file, "depth_by_position_dst_file": depth_by_position_dst_file}))
+
+    # ncov-tools-plots/depth-heatmap
+    depth_by_position_outdir = os.path.join(config['output_dir'], 'ncov-tools-plots', 'depth-heatmap')
+    for plate_number in plate_numbers:
+        depth_heatmap_src_file = os.path.join(latest_ncov_tools_output_path, 'by_plate', plate_number, 'plots', run_id + '_' + plate_number + '_amplicon_coverage_heatmap.pdf')
+        depth_heatmap_dst_file = os.path.join(depth_by_position_outdir, run_id + '_' + plate_number + '_amplicon_coverage_heatmap.pdf')
+        if os.path.exists(depth_heatmap_src_file) and not os.path.exists(depth_heatmap_dst_file):
+            shutil.copyfile(depth_heatmap_src_file, depth_heatmap_dst_file)
+            logging.info(json.dumps({"event_type": "copy_depth_heatmap_file_complete", "run_id": run_id, "plate_number": plate_number, "depth_heatmap_src_file": depth_heatmap_src_file, "depth_heatmap_dst_file": depth_heatmap_dst_file}))
+
+    # ncov-tools-plots/tree-snps
+    tree_snps_outdir = os.path.join(config['output_dir'], 'ncov-tools-plots', 'tree-snps')
+    for plate_number in plate_numbers:
+        tree_snps_src_file = os.path.join(latest_ncov_tools_output_path, 'by_plate', plate_number, 'plots', run_id + '_' + plate_number + '_tree_snps.pdf')
+        tree_snps_dst_file = os.path.join(tree_snps_outdir, run_id + '_' + plate_number + '_tree_snps.pdf')
+        if os.path.exists(tree_snps_src_file) and not os.path.exists(tree_snps_dst_file):
+            shutil.copyfile(tree_snps_src_file, tree_snps_dst_file)
+            logging.info(json.dumps({"event_type": "tree_snps_file_complete", "run_id": run_id, "plate_number": plate_number, "tree_snps_src_file": tree_snps_src_file, "tree_snps_dst_file": tree_snps_dst_file}))
+
+    # 
 
     logging.info(json.dumps({"event_type": "collect_outputs_complete"}))

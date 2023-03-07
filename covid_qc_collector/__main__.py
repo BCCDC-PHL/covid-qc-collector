@@ -48,6 +48,15 @@ def main():
                     logging.error(json.dumps({"event_type": "load_config_failed", "config_file": os.path.abspath(args.config)}))
 
             scan_start_timestamp = datetime.datetime.now()
+
+            logging.info(json.dumps({"event_type": "parse_plates_by_run_started"}))
+            plates_by_run = core.plates_by_run(config)
+            logging.info(json.dumps({"event_type": "parse_plates_by_run_complete"}))
+            plates_by_run_output_file = os.path.join(config['output_dir'], 'plates_by_run.json')
+            with open(plates_by_run_output_file, 'w') as f:
+                json.dump(plates_by_run, f)
+            logging.info(json.dumps({"event_type": "write_plates_by_run_file_complete", "plates_by_run_file": plates_by_run_output_file}))
+
             for run in core.scan(config):
                 if run is not None:
                     try:
