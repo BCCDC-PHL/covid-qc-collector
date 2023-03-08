@@ -63,16 +63,16 @@ def find_samplesheet_for_run(run_id, sequencer_output_dirs):
     return samplesheet_path
 
 
-def count_covid19_production_samples_in_samplesheet(samplesheet_path):
+def count_covid19_production_samples_in_samplesheet(samplesheet_path, sequencer_type):
     """
     """
     num_covid19_production_samples = 0
-    if re.match('\d{6}_VH', os.path.basename(os.path.dirname(samplesheet_path))):
+    if sequencer_type == 'nextseq':
         with open(samplesheet_path, 'r') as f:
             for row in f:
                 if re.search(',covid-19_production,', row):
                     num_covid19_production_samples += 1
-    elif re.match('\d{6}_M', os.path.basename(os.path.dirname(samplesheet_path))):
+    elif sequencer_type == 'miseq':
         covid_library_id_regexes = [
             'S\d{1,3},[ER]\d{10},',                                  # Container ID only
             'S\d{1,3},[FHSTW]\d{6},',                                # Foreign Container ID

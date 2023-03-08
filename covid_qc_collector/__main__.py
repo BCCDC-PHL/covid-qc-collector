@@ -54,7 +54,7 @@ def main():
             logging.info(json.dumps({"event_type": "parse_plates_by_run_complete"}))
             plates_by_run_output_file = os.path.join(config['output_dir'], 'plates_by_run.json')
             with open(plates_by_run_output_file, 'w') as f:
-                json.dump(plates_by_run, f)
+                json.dump(plates_by_run, f, indent=2)
             logging.info(json.dumps({"event_type": "write_plates_by_run_file_complete", "plates_by_run_file": plates_by_run_output_file}))
 
             for run in core.scan(config):

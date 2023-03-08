@@ -1,3 +1,4 @@
+import collections
 import glob
 import json
 import logging
@@ -49,17 +50,63 @@ def find_analysis_dirs(config, check_complete=True):
             yield None
 
 
+def get_plate_ids_for_run(run_id, artic_qc_path):
+    """
+    """
+    plate_ids = set()
+    run = collections.OrderedDict()
+    with open(artic_qc_path, 'r') as f:
+        try:
+            next(f)
+        except StopIteration as e:
+            pass
+        for line in f:
+            library_id = line.strip().split(',')[0]
+            if not (re.match('POS', library_id) or re.match('NEG', library_id)):
+                plate_id = int(library_id.split('-')[1])
+                plate_ids.add(plate_id)
+
+    plate_ids = list(plate_ids)
+
+    return plate_ids
+
+            
 def plates_by_run(config):
     """
     """
+    logging.info(json.dumps({"event_type": "collect_plates_by_run_start"}))
+    plates_by_run = []
     all_analysis_dirs = sorted(list(os.listdir(config['analysis_by_run_dir'])))
     all_run_ids = filter(lambda x: re.match('\d{6}_[VM]', x) != None, all_analysis_dirs)
     for run_id in all_run_ids:
+        sequencer_type = None
+        if re.match('\d{6}_M\d{5}_', run_id):
+            sequencer_type = 'miseq'
+        elif re.match('\d{6}_VH\d{5}_', run_id):
+            sequencer_type = 'nextseq'
         samplesheet_path = samplesheet.find_samplesheet_for_run(run_id, config['sequencer_output_dirs'])
-        if samplesheet_path:
+        if samplesheet_path and sequencer_type:
             logging.info(json.dumps({"event_type": "found_samplesheet_file", "run_id": run_id, "samplesheet_path": samplesheet_path}))
+            num_covid19_production_samples_in_samplesheet = samplesheet.count_covid19_production_samples_in_samplesheet(samplesheet_path, sequencer_type)
+            fastq_input_dir = os.path.join(config['fastq_input_dir'], run_id)
+            fastq_input_paths = glob.glob(os.path.join(fastq_input_dir, '*.fastq.gz'))
+            fastq_input_paths = list(filter(lambda x: not re.match('Undetermined_R[12].fastq.gz', os.path.basename(x)), fastq_input_paths))
+            artic_qc_path = os.path.join(config['analysis_by_run_dir'], run_id, 'ncov2019-artic-nf-v' + config['artic_output_version'] + '-output', run_id + '.qc.csv')
+            if os.path.isfile(artic_qc_path):
+                plate_ids = get_plate_ids_for_run(run_id, artic_qc_path)
+                if plate_ids:
+                    run = collections.OrderedDict()
+                    run['run_id'] = run_id
+                    run['num_fastq_symlink_pairs'] = int(len(fastq_input_paths) / 2)
+                    run['num_covid19_production_samples_in_samplesheet'] = num_covid19_production_samples_in_samplesheet
+                    run['plate_ids'] = plate_ids
+                    plates_by_run.append(run)
         else:
             logging.error(json.dumps({"event_type": "failed_to_find_samplesheet_file", "run_id": run_id}))
+
+    logging.info(json.dumps({"event_type": "collect_plates_by_run_complete"}))
+
+    return plates_by_run
     
 
 def scan(config: dict[str, object]) -> Iterator[Optional[dict[str, str]]]:
@@ -74,6 +121,7 @@ def scan(config: dict[str, object]) -> Iterator[Optional[dict[str, str]]]:
     logging.info(json.dumps({"event_type": "scan_start"}))
     for analysis_dir in find_analysis_dirs(config):    
         yield analysis_dir
+
 
 def find_latest_artic_output(analysis_dir):
     """

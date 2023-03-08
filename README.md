@@ -23,7 +23,12 @@ This tool takes a single config file, in JSON format, with the following structu
 
 ```json
 {
+  "sequencer_output_dirs": [
+    "/path/to/sequencer-01/output"
+  ],
+  "fastq_input_dir": "/path/to/fastq_input_by_run",
   "analysis_output_dir": "/path/to/analysis_by_run",
+  "output_dir": "/path/to/output",
   "scan_interval_seconds": 3600
 }
 ```
