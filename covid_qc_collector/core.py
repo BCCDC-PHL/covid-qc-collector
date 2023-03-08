@@ -205,12 +205,39 @@ def collect_outputs(config: dict[str, object], analysis_dir: Optional[dict[str, 
     # ncov-tools-plots/tree-snps
     tree_snps_outdir = os.path.join(config['output_dir'], 'ncov-tools-plots', 'tree-snps')
     for plate_number in plate_numbers:
-        tree_snps_src_file = os.path.join(latest_ncov_tools_output_path, 'by_plate', plate_number, 'plots', run_id + '_' + plate_number + '_tree_snps.pdf')
-        tree_snps_dst_file = os.path.join(tree_snps_outdir, run_id + '_' + plate_number + '_tree_snps.pdf')
+        tree_snps_src_file = os.path.join(
+            latest_ncov_tools_output_path,
+            'by_plate',
+            plate_number,
+            'plots',
+            run_id + '_' + plate_number + '_tree_snps.pdf'
+        )
+        tree_snps_dst_file = os.path.join(
+            tree_snps_outdir,
+            run_id + '_' + plate_number + '_tree_snps.pdf'
+        )
         if os.path.exists(tree_snps_src_file) and not os.path.exists(tree_snps_dst_file):
             shutil.copyfile(tree_snps_src_file, tree_snps_dst_file)
-            logging.info(json.dumps({"event_type": "tree_snps_file_complete", "run_id": run_id, "plate_number": plate_number, "tree_snps_src_file": tree_snps_src_file, "tree_snps_dst_file": tree_snps_dst_file}))
+            logging.info(json.dumps({"event_type": "tree_snps_file_complete", "run_id": run_id, "plate_number": plate_number, "src_file": tree_snps_src_file, "dst_file": tree_snps_dst_file}))
 
-    # 
+    # ncov-tools-qc-summary
+    qc_summary_outdir = os.path.join(config['output_dir'], 'ncov-tools-summary')
+    for plate_number in plate_numbers:
+        summary_qc_src_file = os.path.join(
+            latest_ncov_tools_output_path,
+            'by_plate',
+            plate_number,
+            'qc_reports',
+            run_id + '_' + plate_number + '_summary_qc.tsv'
+        )
+        summary_qc_dst_file = os.path.join(
+            qc_summary_outdir,
+            run_id + '_' + plate_number + '_summary_qc.json'
+        )
+        if os.path.exists(summary_qc_src_file) and not os.path.exists(summary_qc_dst_file):
+            ncov_tools_summary_qc = parsers.parse_ncov_tools_summary_qc(summary_qc_src_file)
+            with open(summary_qc_dst_file, 'w') as f:
+                json.dump(ncov_tools_summary_qc, f, indent=2)
+                logging.info(json.dumps({"event_type": "ncov-tools_summary_qc_file_complete", "run_id": run_id, "plate_number": plate_number, "src_file": summary_qc_src_file, "dst_file": summary_qc_dst_file}))
 
     logging.info(json.dumps({"event_type": "collect_outputs_complete"}))
