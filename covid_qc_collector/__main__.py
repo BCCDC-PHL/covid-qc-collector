@@ -47,6 +47,8 @@ def main():
                     # last valid config that was loaded.
                     logging.error(json.dumps({"event_type": "load_config_failed", "config_file": os.path.abspath(args.config)}))
 
+            core.create_output_dirs(config)
+
             scan_start_timestamp = datetime.datetime.now()
 
             logging.info(json.dumps({"event_type": "parse_plates_by_run_started"}))

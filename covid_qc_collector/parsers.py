@@ -2,6 +2,7 @@ import collections
 import re
 import csv
 
+
 def parse_artic_qc(artic_qc_path, run_id):
     """
     """
@@ -161,5 +162,60 @@ def parse_ncov_tools_summary_qc(ncov_tools_summary_qc_path):
                 else:
                     qc[field] = row[field]
             output.append(qc)
+
+    return output
+
+
+def parse_amplicon_depth_bed(amplicon_depth_bed_path):
+    """
+    """
+    output = []
+    all_input_fields = [
+        'reference_name',
+        'start',
+        'end',
+        'amplicon_id',
+        'pool',
+        'strand',
+        'mean_depth',
+    ]
+
+    int_fields = [
+        'start',
+        'end',
+        'pool',
+    ]
+
+    float_fields = [
+        'mean_depth',
+    ]
+
+    with open(amplicon_depth_bed_path, 'r') as f:
+        reader = csv.DictReader(f, dialect='excel-tab')
+        for row in reader:
+            amplicon = collections.OrderedDict()
+            for field in all_input_fields:
+                if row[field] == 'NA':
+                    amplicon[field] = None
+                elif field in int_fields:
+                    try:
+                        amplicon[field] = int(row[field])
+                    except ValueError as e:
+                        amplicon[field] = None
+                elif field in float_fields:
+                    try:
+                        amplicon[field] = float(row[field])
+                    except ValueError as e:
+                        amplicon[field] = None
+                elif field == 'reference_name':
+                    pass
+                elif field == 'amplicon_id':
+                    try:
+                        amplicon['amplicon_num'] = int(row[field].split('_')[-1])
+                    except ValueError as e:
+                        amplicon['amplicon_num'] = None
+                else:
+                    amplicon[field] = row[field]
+            output.append(amplicon)
 
     return output
