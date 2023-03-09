@@ -28,6 +28,7 @@ This tool takes a single config file, in JSON format, with the following structu
   ],
   "fastq_input_dir": "/path/to/fastq_input_by_run",
   "analysis_output_dir": "/path/to/analysis_by_run",
+  "excluded_runs_list": "/path/to/excluded_runs.csv",
   "output_dir": "/path/to/output",
   "scan_interval_seconds": 3600
 }

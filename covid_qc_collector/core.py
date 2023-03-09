@@ -27,8 +27,8 @@ def create_output_dirs(config):
     ]
     for output_dir in output_dirs:
         if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-
+            os.makedirs(output_dir)    
+    
 
 def find_analysis_dirs(config, check_complete=True):
     """
@@ -42,6 +42,7 @@ def find_analysis_dirs(config, check_complete=True):
         run_id = subdir.name
         matches_miseq_regex = re.match(miseq_run_id_regex, run_id)
         matches_nextseq_regex = re.match(nextseq_run_id_regex, run_id)
+        not_excluded = run_id not in config['excluded_runs']
         if check_complete:
             ready_to_collect = True
             # ready_to_collect = os.path.exists()
@@ -51,6 +52,7 @@ def find_analysis_dirs(config, check_complete=True):
         conditions_checked = {
             "is_directory": subdir.is_dir(),
             "matches_illumina_run_id_format": ((matches_miseq_regex is not None) or (matches_nextseq_regex is not None)),
+            "not_excluded": not_excluded,
             "ready_to_collect": ready_to_collect,
         }
         conditions_met = list(conditions_checked.values())
@@ -105,6 +107,8 @@ def plates_by_run(config):
     all_analysis_dirs = sorted(list(os.listdir(config['analysis_by_run_dir'])))
     all_run_ids = filter(lambda x: re.match('\d{6}_[VM]', x) != None, all_analysis_dirs)
     for run_id in all_run_ids:
+        if run_id in config['excluded_runs']:
+            continue
         sequencer_type = None
         if re.match('\d{6}_M\d{5}_', run_id):
             sequencer_type = 'miseq'
