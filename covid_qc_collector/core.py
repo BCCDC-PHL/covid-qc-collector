@@ -44,8 +44,11 @@ def find_analysis_dirs(config, check_complete=True):
         matches_nextseq_regex = re.match(nextseq_run_id_regex, run_id)
         not_excluded = run_id not in config['excluded_runs']
         if check_complete:
-            ready_to_collect = True
-            # ready_to_collect = os.path.exists()
+            latest_artic_output = find_latest_artic_output(subdir)
+            latest_ncov_tools_output = find_latest_ncov_tools_output(latest_artic_output)
+            artic_analysis_complete = os.path.exists(os.path.join(latest_artic_output, 'analysis_complete.json'))
+            ncov_tools_analysis_complete = os.path.exists(os.path.join(latest_ncov_tools_output, 'analysis_complete.json'))
+            ready_to_collect = artic_analysis_complete and ncov_tools_analysis_complete
         else:
             ready_to_collect = True
         
@@ -146,7 +149,7 @@ def plates_by_run(config):
     }))
 
     return plates_by_run
-    
+
 
 def scan(config: dict[str, object]) -> Iterator[Optional[dict[str, str]]]:
     """
