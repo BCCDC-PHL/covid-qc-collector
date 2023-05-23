@@ -43,15 +43,18 @@ def find_analysis_dirs(config, check_complete=True):
         matches_miseq_regex = re.match(miseq_run_id_regex, run_id)
         matches_nextseq_regex = re.match(nextseq_run_id_regex, run_id)
         not_excluded = run_id not in config['excluded_runs']
+        ready_to_collect = False
         if check_complete:
             latest_artic_output = find_latest_artic_output(subdir)
-            latest_ncov_tools_output = find_latest_ncov_tools_output(latest_artic_output)
-            artic_analysis_complete = os.path.exists(os.path.join(latest_artic_output, 'analysis_complete.json'))
-            ncov_tools_analysis_complete = os.path.exists(os.path.join(latest_ncov_tools_output, 'analysis_complete.json'))
-            ready_to_collect = artic_analysis_complete and ncov_tools_analysis_complete
+            if latest_artic_output is not None and os.path.exists(latest_artic_output):
+                latest_ncov_tools_output = find_latest_ncov_tools_output(latest_artic_output)
+                artic_analysis_complete = os.path.exists(os.path.join(latest_artic_output, 'analysis_complete.json'))
+                if latest_ncov_tools_output is not None and os.path.exists(latest_ncov_tools_output):
+                    ncov_tools_analysis_complete = os.path.exists(os.path.join(latest_ncov_tools_output, 'analysis_complete.json'))
+                    ready_to_collect = artic_analysis_complete and ncov_tools_analysis_complete
         else:
             ready_to_collect = True
-        
+
         conditions_checked = {
             "is_directory": subdir.is_dir(),
             "matches_illumina_run_id_format": ((matches_miseq_regex is not None) or (matches_nextseq_regex is not None)),
@@ -170,7 +173,9 @@ def find_latest_artic_output(analysis_dir):
     """
     artic_output_dir_glob = "ncov2019-artic-nf-v*-output"
     artic_output_dirs = glob.glob(os.path.join(analysis_dir, artic_output_dir_glob))
-    latest_artic_output_dir = os.path.abspath(artic_output_dirs[-1])
+    latest_artic_output_dir = None
+    if len(artic_output_dirs) > 0:
+        latest_artic_output_dir = os.path.abspath(artic_output_dirs[-1])
 
     return latest_artic_output_dir
 
@@ -179,8 +184,10 @@ def find_latest_ncov_tools_output(artic_output_dir):
     """
     """
     ncov_tools_output_dir_glob = "ncov-tools-v*-output"
-    ncov_tools_output_dirs = glob.glob(os.path.join(artic_output_dir, ncov_tools_output_dir_glob))
-    latest_ncov_tools_output_dir = os.path.abspath(ncov_tools_output_dirs[-1])
+    latest_ncov_tools_output_dir = None
+    if artic_output_dir is not None and os.path.exists(artic_output_dir):
+        ncov_tools_output_dirs = glob.glob(os.path.join(artic_output_dir, ncov_tools_output_dir_glob))
+        latest_ncov_tools_output_dir = os.path.abspath(ncov_tools_output_dirs[-1])
 
     return latest_ncov_tools_output_dir
 
@@ -212,7 +219,7 @@ def collect_outputs(config: dict[str, object], analysis_dir: Optional[dict[str, 
     latest_artic_output_path = find_latest_artic_output(analysis_dir['path'])
     artic_qc_src_file = os.path.join(latest_artic_output_path, run_id + '.qc.csv')
     artic_qc_dst_file = os.path.join(config['output_dir'], "artic-qc", run_id + "_qc.json")
-    if not os.path.exists(artic_qc_dst_file):
+    if os.path.exists(artic_qc_src_file) and not os.path.exists(artic_qc_dst_file):
         artic_qc = parsers.parse_artic_qc(artic_qc_src_file, run_id)
         with open(artic_qc_dst_file, 'w') as f:
             json.dump(artic_qc, f, indent=2)

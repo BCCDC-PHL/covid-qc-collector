@@ -25,7 +25,7 @@ def find_samplesheet_for_run(run_id, sequencer_output_dirs):
                 continue
             for run_dir in os.listdir(sequencer_output_dir):
                 if os.path.basename(run_dir) == run_id:
-                    sequencer_run_dir = run_dir
+                    sequencer_run_dir = os.path.join(sequencer_output_dir, run_dir)
 
         if os.path.exists(os.path.join(sequencer_run_dir, 'Alignment_1')):
             # Run is 'new-style' MiSeq Output directory
@@ -37,8 +37,10 @@ def find_samplesheet_for_run(run_id, sequencer_output_dirs):
             standard_samplesheet_path = os.path.join(sequencer_run_dir, 'SampleSheet.csv')
             if os.path.exists(standard_samplesheet_path):
                 samplesheets = [standard_samplesheet_path]
+                logging.debug(json.dumps({"event_type": "found_samplesheets", "run_id": run_id, "sequencer_run_dir": sequencer_run_dir, "samplesheet_paths": samplesheets}))
             else:
                 samplesheets = glob.glob(os.path.join(sequencer_run_dir, 'SampleSheet*.csv'))
+                logging.debug(json.dumps({"event_type": "found_samplesheets", "run_id": run_id, "sequencer_run_dir": sequencer_run_dir, "samplesheet_paths": samplesheets}))
             
     elif sequencer_type == 'nextseq':
         logging.debug(json.dumps({"event_type": "determined_sequencer_type", "run_id": run_id, "sequencer_type": sequencer_type}))
