@@ -18,7 +18,7 @@ def find_samplesheet_for_run(run_id, sequencer_output_dirs):
     else:
         return samplesheet_path
 
-    sequencer_run_dir = None
+    sequencer_run_dir = ""
     if sequencer_type == 'miseq':
         for sequencer_output_dir in sequencer_output_dirs:
             if not re.search('miseq', sequencer_output_dir):
