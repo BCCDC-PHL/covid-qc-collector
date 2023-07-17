@@ -187,7 +187,8 @@ def find_latest_ncov_tools_output(artic_output_dir):
     latest_ncov_tools_output_dir = None
     if artic_output_dir is not None and os.path.exists(artic_output_dir):
         ncov_tools_output_dirs = glob.glob(os.path.join(artic_output_dir, ncov_tools_output_dir_glob))
-        latest_ncov_tools_output_dir = os.path.abspath(ncov_tools_output_dirs[-1])
+        if len(ncov_tools_output_dirs) > 0:
+            latest_ncov_tools_output_dir = os.path.abspath(ncov_tools_output_dirs[-1])
 
     return latest_ncov_tools_output_dir
 
