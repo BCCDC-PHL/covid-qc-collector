@@ -14,6 +14,12 @@ import covid_qc_collector.samplesheet as samplesheet
 
 def create_output_dirs(config):
     """
+    Create output directories if they don't already exist.
+
+    :param config: Application config.
+    :type config: dict[str, object]
+    :return: None
+    :rtype: None
     """
     base_outdir = config['output_dir']
     output_dirs = [
@@ -28,10 +34,16 @@ def create_output_dirs(config):
     for output_dir in output_dirs:
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)    
-    
+
 
 def find_analysis_dirs(config, check_complete=True):
     """
+    Find all analysis directories.
+
+    :param config: Application config.
+    :type config: dict[str, object]
+    :return: A run directory to analyze, or None
+    :rtype: Iterator[Optional[dict[str, object]]]
     """
     miseq_run_id_regex = "\d{6}_M\d{5}_\d+_\d{9}-[A-Z0-9]{5}"
     nextseq_run_id_regex = "\d{6}_VH\d{5}_\d+_[A-Z0-9]{9}"
@@ -86,6 +98,14 @@ def find_analysis_dirs(config, check_complete=True):
 
 def get_plate_ids_for_run(run_id, artic_qc_path):
     """
+    Get the plate IDs for a run.
+
+    :param run_id: The run ID
+    :type run_id: str
+    :param artic_qc_path: The path to the artic qc file
+    :type artic_qc_path: str
+    :return: The plate IDs
+    :rtype: list[int]
     """
     plate_ids = set()
     run = collections.OrderedDict()
@@ -107,6 +127,12 @@ def get_plate_ids_for_run(run_id, artic_qc_path):
             
 def plates_by_run(config):
     """
+    Get the plates by run.
+
+    :param config: Application config.
+    :type config: dict[str, object]
+    :return: A list of plates by run
+    :rtype: list[dict]
     """
     logging.info(json.dumps({"event_type": "collect_plates_by_run_start"}))
     plates_by_run = []
@@ -140,6 +166,11 @@ def plates_by_run(config):
                     run['num_fastq_symlink_pairs'] = int(len(fastq_input_paths) / 2)
                     run['num_covid19_production_samples_in_samplesheet'] = num_covid19_production_samples_in_samplesheet
                     run['plate_ids'] = plate_ids
+                    if 'failed_plates_by_run' in config:
+                        if run_id in config['failed_plates_by_run']:
+                            run['failed_plates'] = list(config['failed_plates_by_run'][run_id])
+                        else:
+                            run['failed_plates'] = []
                     plates_by_run.append(run)
         else:
             logging.error(json.dumps({

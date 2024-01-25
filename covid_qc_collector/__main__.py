@@ -37,6 +37,8 @@ def main():
     quit_when_safe = False
 
     while(True):
+        if quit_when_safe:
+            exit()
         try:
             if args.config:
                 try:

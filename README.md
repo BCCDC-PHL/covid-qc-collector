@@ -23,15 +23,25 @@ This tool takes a single config file, in JSON format, with the following structu
 
 ```json
 {
-  "sequencer_output_dirs": [
-    "/path/to/sequencer-01/output"
-  ],
-  "fastq_input_dir": "/path/to/fastq_input_by_run",
-  "analysis_output_dir": "/path/to/analysis_by_run",
-  "excluded_runs_list": "/path/to/excluded_runs.csv",
-  "output_dir": "/path/to/output",
-  "scan_interval_seconds": 3600
+    "sequencer_output_dirs": [
+	"/path/to/sequencer1/output",
+	"/path/to/sequencer2/output",
+    ],
+    "analysis_by_run_dir": "/path/to/analysis_by_run",
+    "fastq_input_dir": "/path/to/fastq_symlinks_by_run",
+    "excluded_runs_list": "/path/to/excluded_runs.csv",
+    "plate_qc_log": "/path/to/plate_qc_log.csv",
+    "artic_output_version": "1.3",
+    "scan_interval_seconds": 60,
+    "output_dir": "/path/to/output_dir"
 }
+```
+
+The `plate_qc_log` is optional. If provided, it should be csv formatted and include the following fields:
+
+```
+sequencing_run_id
+removed_plate_id
 ```
 
 # Logging
