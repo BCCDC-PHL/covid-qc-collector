@@ -44,13 +44,21 @@ def parse_artic_qc(artic_qc_path, run_id):
                     qc['library_id'] = library_id
                     plate_id = None
                     if library_id.startswith('POS') or library_id.startswith('NEG'):
-                        try:
-                            plate_id = re.search("\d+", library_id.split('-')[2]).group(0)
-                        except AttributeError as e:
-                            pass
+                        # Format like POSYYYYMMDD-nCoVWGS-1-A or NEGYYYYMMDD-nCoVWGS-1-A
+                        if re.match("\\w{3}\\d{8}-nCoVWGS-\\d+-\\w+", library_id):
+                            try:
+                                plate_id = re.search("\\d+", library_id.split('-')[2]).group(0)
+                            except AttributeError as e:
+                                pass
+                        # Format like POSNN-1-A-A01 or NEGNN-1-A-B01
+                        elif re.match("\\w{3}\\d+-\\d+-\\w+-\\w+", library_id):
+                            try:
+                                plate_id = re.search("\\d+", library_id.split('-')[1]).group(0)
+                            except AttributeError as e:
+                                pass
                     else:
                         try:
-                            plate_id = re.search("\d+", library_id.split('-')[1]).group(0)
+                            plate_id = re.search("\\d+", library_id.split('-')[1]).group(0)
                         except AttributeError as e:
                             pass
                     if plate_id:
