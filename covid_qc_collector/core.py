@@ -117,7 +117,7 @@ def get_plate_ids_for_run(run_id, artic_qc_path):
         for line in f:
             library_id = line.strip().split(',')[0]
             if not (re.match('POS', library_id) or re.match('NEG', library_id)):
-                plate_id = int(library_id.split('-')[1])
+                plate_id = library_id.split('-')[1]
                 plate_ids.add(plate_id)
 
     plate_ids = list(plate_ids)

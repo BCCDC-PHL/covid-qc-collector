@@ -5,6 +5,12 @@ import csv
 
 def parse_artic_qc(artic_qc_path, run_id):
     """
+    Parse the artic qc file into a list of dicts.
+
+    :param artic_qc_path: The path to the artic qc file
+    :type artic_qc_path: str
+    :return: The artic qc
+    :rtype: list[dict]
     """
     output = []
     all_input_fields = [
@@ -81,7 +87,7 @@ def parse_artic_qc(artic_qc_path, run_id):
                     except ValueError as e:
                         qc[field] = None
                 elif field == 'run_name':
-                    qc['plate_id'] = int(row[field].split('_')[-1])
+                    qc['plate_id'] = row[field].split('_')[-1]
                     qc['run_id'] = '_'.join(row[field].split('_')[0:-1])
                 elif field == 'qc_pass':
                     qc[field] = row[field].split(',')
